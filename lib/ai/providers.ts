@@ -1,6 +1,10 @@
-import { customProvider, gateway } from "ai";
+import { createAnthropic } from "@ai-sdk/anthropic";
+import { customProvider } from "ai";
 import { isTestEnvironment } from "../constants";
-import { titleModel } from "./models";
+
+const anthropic = createAnthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
 
 export const myProvider = isTestEnvironment
   ? (() => {
@@ -19,12 +23,16 @@ export function getLanguageModel(modelId: string) {
     return myProvider.languageModel(modelId);
   }
 
-  return gateway.languageModel(modelId);
+  // Strip provider prefix (e.g. "anthropic/claude-sonnet-4-6" -> "claude-sonnet-4-6")
+  const id = modelId.includes("/")
+    ? modelId.split("/").slice(1).join("/")
+    : modelId;
+  return anthropic(id);
 }
 
 export function getTitleModel() {
   if (isTestEnvironment && myProvider) {
     return myProvider.languageModel("title-model");
   }
-  return gateway.languageModel(titleModel.id);
+  return anthropic("claude-haiku-4-5-20251001");
 }
