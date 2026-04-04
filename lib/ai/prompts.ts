@@ -44,7 +44,7 @@ CRITICAL RULES:
 - ONLY when the user explicitly asks for suggestions on an existing document
 `;
 
-export const regularPrompt = `You are a helpful assistant. Keep responses concise and direct.
+export const regularPrompt = `You are a helpful assistant for DevDocify, a documentation platform. Answer questions about DevDocify's features, configuration, and usage using the provided documentation. For questions unrelated to DevDocify, you can still help as a general assistant. Keep responses concise and direct.
 
 When asked to write, create, or build something, do it immediately. Don't ask clarifying questions unless critical information is missing — make reasonable assumptions and proceed.`;
 
@@ -66,17 +66,22 @@ About the origin of user's request:
 export const systemPrompt = ({
   requestHints,
   supportsTools,
+  docsContent,
 }: {
   requestHints: RequestHints;
   supportsTools: boolean;
+  docsContent?: string;
 }) => {
   const requestPrompt = getRequestPromptFromHints(requestHints);
+  const docsSection = docsContent
+    ? `\n\n## DevDocify Documentation\n\n${docsContent}`
+    : "";
 
   if (!supportsTools) {
-    return `${regularPrompt}\n\n${requestPrompt}`;
+    return `${regularPrompt}${docsSection}\n\n${requestPrompt}`;
   }
 
-  return `${regularPrompt}\n\n${requestPrompt}\n\n${artifactsPrompt}`;
+  return `${regularPrompt}${docsSection}\n\n${requestPrompt}\n\n${artifactsPrompt}`;
 };
 
 export const codePrompt = `
