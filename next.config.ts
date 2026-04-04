@@ -4,6 +4,20 @@ import type { NextConfig } from "next";
 const basePath = process.env.IS_DEMO === "1" ? "/demo" : "";
 
 const nextConfig: NextConfig = {
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value:
+              "frame-ancestors 'self' https://www.devdocify.com https://devdocify.com http://localhost:*",
+          },
+        ],
+      },
+    ];
+  },
   ...(basePath
     ? {
         basePath,
