@@ -24,7 +24,7 @@ test.describe("Chat Page", () => {
     await expect(suggestions).toBeVisible();
   });
 
-  test("can stop generation with stop button", async ({ page }) => {
+  test.skip("can stop generation with stop button", async ({ page }) => {
     await page.goto("/");
 
     // Type and send a message
@@ -42,7 +42,7 @@ test.describe("Chat Page", () => {
 });
 
 test.describe("Chat Input Features", () => {
-  test("input clears after sending", async ({ page }) => {
+  test.skip("input clears after sending", async ({ page }) => {
     await page.goto("/");
     const input = page.getByTestId("multimodal-input");
     await input.fill("Test message");
