@@ -1,19 +1,16 @@
 import { streamText } from "ai";
-import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
 import { fetchDocsContent } from "@/lib/ai/docs";
+import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
 import { regularPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
 
 export const maxDuration = 30;
 
-const ALLOWED_ORIGINS = [
-  "https://www.devdocify.com",
-  "https://devdocify.com",
-];
+const ALLOWED_ORIGINS = ["https://www.devdocify.com", "https://devdocify.com"];
 
 function corsHeaders(origin: string | null): Record<string, string> {
   const allowed =
-    (origin && ALLOWED_ORIGINS.includes(origin)) ||
+    (origin !== null && ALLOWED_ORIGINS.includes(origin)) ||
     origin?.startsWith("http://localhost");
   return {
     "Access-Control-Allow-Origin": allowed
@@ -24,7 +21,7 @@ function corsHeaders(origin: string | null): Record<string, string> {
   };
 }
 
-export async function OPTIONS(request: Request) {
+export function OPTIONS(request: Request) {
   return new Response(null, {
     status: 204,
     headers: corsHeaders(request.headers.get("origin")),

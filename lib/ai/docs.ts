@@ -10,7 +10,9 @@ export async function fetchDocsContent(): Promise<string | undefined> {
   }
   try {
     const res = await fetch(LLMS_TXT_URL, { next: { revalidate: 3600 } });
-    if (!res.ok) return undefined;
+    if (!res.ok) {
+      return undefined;
+    }
     const content = await res.text();
     cache = { content, fetchedAt: now };
     return content;
