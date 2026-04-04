@@ -25,6 +25,7 @@ import { editDocument } from "@/lib/ai/tools/edit-document";
 import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { updateDocument } from "@/lib/ai/tools/update-document";
+import { fetchDocsContent } from "@/lib/ai/docs";
 import { isProductionEnvironment } from "@/lib/constants";
 import {
   createStreamId,
@@ -46,6 +47,7 @@ import { generateTitleFromUserMessage } from "../../actions";
 import { type PostRequestBody, postRequestBodySchema } from "./schema";
 
 export const maxDuration = 60;
+
 
 function getStreamContext() {
   try {
@@ -186,14 +188,17 @@ export async function POST(request: Request) {
     const isReasoningModel = capabilities?.reasoning === true;
     const supportsTools = capabilities?.tools === true;
 
-    const modelMessages = await convertToModelMessages(uiMessages);
+    const [modelMessages, docsContent] = await Promise.all([
+      convertToModelMessages(uiMessages),
+      fetchDocsContent(),
+    ]);
 
     const stream = createUIMessageStream({
       originalMessages: isToolApprovalFlow ? uiMessages : undefined,
       execute: async ({ writer: dataStream }) => {
         const result = streamText({
           model: getLanguageModel(chatModel),
-          system: systemPrompt({ requestHints, supportsTools }),
+          system: systemPrompt({ requestHints, supportsTools, docsContent }),
           messages: modelMessages,
           stopWhen: stepCountIs(5),
           experimental_activeTools:
