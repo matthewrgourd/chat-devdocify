@@ -5,6 +5,8 @@ import { regularPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
 
 export const maxDuration = 30;
+const MODEL_TOTAL_TIMEOUT_MS = 25000;
+const MODEL_CHUNK_TIMEOUT_MS = 10000;
 
 const ALLOWED_ORIGINS = ["https://www.devdocify.com", "https://devdocify.com"];
 
@@ -49,19 +51,34 @@ export async function POST(request: Request) {
     : "";
   const system = `${regularPrompt}${docsSection}`;
 
-  const result = streamText({
-    model: getLanguageModel(DEFAULT_CHAT_MODEL),
-    system,
-    messages: messages as any,
-  });
+  try {
+    const result = streamText({
+      model: getLanguageModel(DEFAULT_CHAT_MODEL),
+      system,
+      messages: messages as any,
+      maxRetries: 0,
+      abortSignal: request.signal,
+      timeout: {
+        totalMs: MODEL_TOTAL_TIMEOUT_MS,
+        chunkMs: MODEL_CHUNK_TIMEOUT_MS,
+      },
+    });
 
-  const textResponse = result.toTextStreamResponse();
-  const responseHeaders = new Headers(textResponse.headers);
-  for (const [k, v] of Object.entries(headers)) {
-    responseHeaders.set(k, v);
+    const textResponse = result.toTextStreamResponse();
+    const responseHeaders = new Headers(textResponse.headers);
+    for (const [k, v] of Object.entries(headers)) {
+      responseHeaders.set(k, v);
+    }
+    responseHeaders.set("X-Accel-Buffering", "no");
+    return new Response(textResponse.body, {
+      status: textResponse.status,
+      headers: responseHeaders,
+    });
+  } catch (error) {
+    console.error("widget-chat failed:", error);
+    return new Response("Sorry, the AI assistant is temporarily unavailable.", {
+      status: 503,
+      headers,
+    });
   }
-  return new Response(textResponse.body, {
-    status: textResponse.status,
-    headers: responseHeaders,
-  });
 }
