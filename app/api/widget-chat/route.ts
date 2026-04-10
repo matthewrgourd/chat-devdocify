@@ -5,7 +5,7 @@ import { regularPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
 
 export const maxDuration = 30;
-const MODEL_CHUNK_TIMEOUT_MS = 10000;
+const MODEL_CHUNK_TIMEOUT_MS = 10_000;
 
 const ALLOWED_ORIGINS = ["https://www.devdocify.com", "https://devdocify.com"];
 
