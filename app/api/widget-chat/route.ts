@@ -5,7 +5,6 @@ import { regularPrompt } from "@/lib/ai/prompts";
 import { getLanguageModel } from "@/lib/ai/providers";
 
 export const maxDuration = 30;
-const MODEL_TOTAL_TIMEOUT_MS = 25000;
 const MODEL_CHUNK_TIMEOUT_MS = 10000;
 
 const ALLOWED_ORIGINS = ["https://www.devdocify.com", "https://devdocify.com"];
@@ -59,7 +58,6 @@ export async function POST(request: Request) {
       maxRetries: 0,
       abortSignal: request.signal,
       timeout: {
-        totalMs: MODEL_TOTAL_TIMEOUT_MS,
         chunkMs: MODEL_CHUNK_TIMEOUT_MS,
       },
     });
