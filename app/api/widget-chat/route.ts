@@ -8,11 +8,18 @@ export const maxDuration = 30;
 const MODEL_CHUNK_TIMEOUT_MS = 10_000;
 
 const ALLOWED_ORIGINS = ["https://www.devdocify.com", "https://devdocify.com"];
+const VERCEL_PREVIEW_ORIGIN_REGEX =
+  /^https:\/\/doc-platform(?:-[a-z0-9-]+)?\.vercel\.app$/i;
+
+function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return false;
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
+  if (origin.startsWith("http://localhost")) return true;
+  return VERCEL_PREVIEW_ORIGIN_REGEX.test(origin);
+}
 
 function corsHeaders(origin: string | null): Record<string, string> {
-  const allowed =
-    (origin !== null && ALLOWED_ORIGINS.includes(origin)) ||
-    origin?.startsWith("http://localhost");
+  const allowed = isAllowedOrigin(origin);
   return {
     "Access-Control-Allow-Origin": allowed
       ? (origin ?? ALLOWED_ORIGINS[0])
@@ -23,14 +30,21 @@ function corsHeaders(origin: string | null): Record<string, string> {
 }
 
 export function OPTIONS(request: Request) {
+  const origin = request.headers.get("origin");
+  if (origin && !isAllowedOrigin(origin)) {
+    return new Response("Forbidden", { status: 403 });
+  }
   return new Response(null, {
     status: 204,
-    headers: corsHeaders(request.headers.get("origin")),
+    headers: corsHeaders(origin),
   });
 }
 
 export async function POST(request: Request) {
   const origin = request.headers.get("origin");
+  if (origin && !isAllowedOrigin(origin)) {
+    return new Response("Forbidden", { status: 403 });
+  }
   const headers = corsHeaders(origin);
 
   let messages: { role: string; content: string }[];
