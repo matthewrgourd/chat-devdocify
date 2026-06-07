@@ -12,9 +12,15 @@ const VERCEL_PREVIEW_ORIGIN_REGEX =
   /^https:\/\/doc-platform(?:-[a-z0-9-]+)?\.vercel\.app$/i;
 
 function isAllowedOrigin(origin: string | null): boolean {
-  if (!origin) { return false; }
-  if (ALLOWED_ORIGINS.includes(origin)) { return true; }
-  if (origin.startsWith("http://localhost")) { return true; }
+  if (!origin) {
+    return false;
+  }
+  if (ALLOWED_ORIGINS.includes(origin)) {
+    return true;
+  }
+  if (origin.startsWith("http://localhost")) {
+    return true;
+  }
   return VERCEL_PREVIEW_ORIGIN_REGEX.test(origin);
 }
 
