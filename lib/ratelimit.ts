@@ -1,14 +1,18 @@
 import { createClient } from "redis";
 
 const TTL_SECONDS = 60 * 60;
+// A cold instance waits this long for its first connection, so its first
+// request is counted too. After that, an unreachable Redis is skipped at once.
+const CONNECT_WAIT_MS = 1000;
 
 let client: ReturnType<typeof createClient> | null = null;
+let connecting: Promise<unknown> | null = null;
 
 function getClient() {
   if (!client && process.env.REDIS_URL) {
     client = createClient({ url: process.env.REDIS_URL });
     client.on("error", () => undefined);
-    client.connect().catch(() => {
+    connecting = client.connect().catch(() => {
       client = null;
     });
   }
@@ -29,6 +33,14 @@ export async function isOverIpRateLimit(
   }
 
   const redis = getClient();
+  if (redis && !redis.isReady && connecting) {
+    const pending = connecting;
+    connecting = null;
+    await Promise.race([
+      pending,
+      new Promise((resolve) => setTimeout(resolve, CONNECT_WAIT_MS)),
+    ]);
+  }
   if (!redis?.isReady) {
     return false;
   }
