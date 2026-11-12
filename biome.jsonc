@@ -10,14 +10,7 @@
     "indentWidth": 2
   },
   "files": {
-    "includes": [
-      "**/*",
-      "!components/ai-elements",
-      "!components/elements",
-      "!components/ui",
-      "!lib/utils.ts",
-      "!hooks/use-mobile.ts"
-    ]
+    "includes": ["**/*"]
   },
   "linter": {
     "rules": {

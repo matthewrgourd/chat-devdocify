@@ -1,16 +1,15 @@
+import { anthropic } from "@ai-sdk/anthropic";
 import { ipAddress } from "@vercel/functions";
 import { streamText } from "ai";
 import { fetchDocsContent } from "@/lib/ai/docs";
-import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
-import { getLanguageModel } from "@/lib/ai/providers";
 import {
   parseWidgetMessages,
   WIDGET_MAX_OUTPUT_TOKENS,
+  WIDGET_MODEL,
   WIDGET_REQUESTS_PER_HOUR,
   widgetPrompt,
 } from "@/lib/ai/widget";
-import { ChatbotError } from "@/lib/errors";
-import { checkIpRateLimit } from "@/lib/ratelimit";
+import { isOverIpRateLimit } from "@/lib/ratelimit";
 
 export const maxDuration = 30;
 const MODEL_CHUNK_TIMEOUT_MS = 10_000;
@@ -77,19 +76,16 @@ export async function POST(request: Request) {
     return new Response("Bad request", { status: 400, headers });
   }
 
-  try {
-    await checkIpRateLimit(ipAddress(request), {
+  if (
+    await isOverIpRateLimit(ipAddress(request), {
       prefix: "widget-rate-limit",
       max: WIDGET_REQUESTS_PER_HOUR,
-    });
-  } catch (error) {
-    if (error instanceof ChatbotError) {
-      return new Response(
-        "You've reached the question limit for now. Please try again in an hour.",
-        { status: 429, headers }
-      );
-    }
-    throw error;
+    })
+  ) {
+    return new Response(
+      "You've reached the question limit for now. Please try again in an hour.",
+      { status: 429, headers }
+    );
   }
 
   const docsContent = await fetchDocsContent();
@@ -100,7 +96,7 @@ export async function POST(request: Request) {
 
   try {
     const result = streamText({
-      model: getLanguageModel(DEFAULT_CHAT_MODEL),
+      model: anthropic(WIDGET_MODEL),
       system,
       messages,
       maxOutputTokens: WIDGET_MAX_OUTPUT_TOKENS,
