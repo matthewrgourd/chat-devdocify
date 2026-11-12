@@ -1,15 +1,26 @@
+import { anthropic } from "@ai-sdk/anthropic";
+import { ipAddress } from "@vercel/functions";
 import { streamText } from "ai";
 import { fetchDocsContent } from "@/lib/ai/docs";
-import { DEFAULT_CHAT_MODEL } from "@/lib/ai/models";
-import { regularPrompt } from "@/lib/ai/prompts";
-import { getLanguageModel } from "@/lib/ai/providers";
+import {
+  parseWidgetMessages,
+  WIDGET_MAX_OUTPUT_TOKENS,
+  WIDGET_MODEL,
+  WIDGET_REQUESTS_PER_HOUR,
+  widgetPrompt,
+} from "@/lib/ai/widget";
+import { isOverIpRateLimit } from "@/lib/ratelimit";
 
 export const maxDuration = 30;
 const MODEL_CHUNK_TIMEOUT_MS = 10_000;
 
 const ALLOWED_ORIGINS = ["https://www.devdocify.com", "https://devdocify.com"];
+// startsWith("http://localhost") would also accept http://localhost.evil.com.
+const LOCALHOST_ORIGIN_REGEX = /^http:\/\/localhost(?::\d+)?$/;
+// Previews of the docs site only. Any Vercel account can create a project named
+// doc-platform-*, so the team scope suffix is required.
 const VERCEL_PREVIEW_ORIGIN_REGEX =
-  /^https:\/\/doc-platform(?:-[a-z0-9-]+)?\.vercel\.app$/i;
+  /^https:\/\/doc-platform-[a-z0-9-]+-matthewrgourds-projects\.vercel\.app$/i;
 
 function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) {
@@ -18,7 +29,7 @@ function isAllowedOrigin(origin: string | null): boolean {
   if (ALLOWED_ORIGINS.includes(origin)) {
     return true;
   }
-  if (origin.startsWith("http://localhost")) {
+  if (LOCALHOST_ORIGIN_REGEX.test(origin)) {
     return true;
   }
   return VERCEL_PREVIEW_ORIGIN_REGEX.test(origin);
@@ -47,34 +58,48 @@ export function OPTIONS(request: Request) {
 }
 
 export async function POST(request: Request) {
+  // Browsers always send Origin on this cross-site POST. A missing one means a
+  // script, which this endpoint is not for.
   const origin = request.headers.get("origin");
-  if (origin && !isAllowedOrigin(origin)) {
+  if (!isAllowedOrigin(origin)) {
     return new Response("Forbidden", { status: 403 });
   }
   const headers = corsHeaders(origin);
 
-  let messages: { role: string; content: string }[];
+  let messages: ReturnType<typeof parseWidgetMessages>;
   try {
-    const body = await request.json();
-    messages = body.messages;
-    if (!Array.isArray(messages) || messages.length === 0) {
-      return new Response("Bad request", { status: 400, headers });
-    }
+    messages = parseWidgetMessages(await request.json());
   } catch {
+    messages = null;
+  }
+  if (!messages) {
     return new Response("Bad request", { status: 400, headers });
+  }
+
+  if (
+    await isOverIpRateLimit(ipAddress(request), {
+      prefix: "widget-rate-limit",
+      max: WIDGET_REQUESTS_PER_HOUR,
+    })
+  ) {
+    return new Response(
+      "You've reached the question limit for now. Please try again in an hour.",
+      { status: 429, headers }
+    );
   }
 
   const docsContent = await fetchDocsContent();
   const docsSection = docsContent
     ? `\n\n## DevDocify Documentation\n\n${docsContent}`
     : "";
-  const system = `${regularPrompt}${docsSection}`;
+  const system = `${widgetPrompt}${docsSection}`;
 
   try {
     const result = streamText({
-      model: getLanguageModel(DEFAULT_CHAT_MODEL),
+      model: anthropic(WIDGET_MODEL),
       system,
-      messages: messages as any,
+      messages,
+      maxOutputTokens: WIDGET_MAX_OUTPUT_TOKENS,
       maxRetries: 0,
       abortSignal: request.signal,
       timeout: {
