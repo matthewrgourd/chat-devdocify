@@ -1,8 +1,8 @@
 // Limits for the public docs widget (POST /api/widget-chat). Anyone can call
 // it without signing in, so every request is bounded before it reaches the model.
 export const WIDGET_MAX_MESSAGES = 20;
-export const WIDGET_MAX_MESSAGE_CHARS = 4000;
-export const WIDGET_MAX_TOTAL_CHARS = 16_000;
+export const WIDGET_MAX_MESSAGE_CHARS = 8000;
+export const WIDGET_MAX_TOTAL_CHARS = 24_000;
 export const WIDGET_MAX_OUTPUT_TOKENS = 1024;
 export const WIDGET_REQUESTS_PER_HOUR = 30;
 
