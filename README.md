@@ -21,7 +21,7 @@ Nothing else is served. This repo started as the Vercel AI Chatbot template; the
 | Variable | Required | Purpose |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | Yes | Model calls. |
-| `REDIS_URL` | For the rate limit | Without it, requests are not limited. |
+| `REDIS_URL` or `KV_URL` | For the rate limit | Any Redis, such as Upstash from the Vercel Marketplace. Without it, requests are not limited. |
 
 ## Develop
 
