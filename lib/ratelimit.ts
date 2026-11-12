@@ -4,13 +4,15 @@ const TTL_SECONDS = 60 * 60;
 // A cold instance waits this long for its first connection, so its first
 // request is counted too. After that, an unreachable Redis is skipped at once.
 const CONNECT_WAIT_MS = 1000;
+// Upstash connected through the Vercel Marketplace sets KV_URL.
+const REDIS_URL = process.env.REDIS_URL ?? process.env.KV_URL;
 
 let client: ReturnType<typeof createClient> | null = null;
 let connecting: Promise<unknown> | null = null;
 
 function getClient() {
-  if (!client && process.env.REDIS_URL) {
-    client = createClient({ url: process.env.REDIS_URL });
+  if (!client && REDIS_URL) {
+    client = createClient({ url: REDIS_URL });
     client.on("error", () => undefined);
     connecting = client.connect().catch(() => {
       client = null;
@@ -21,7 +23,7 @@ function getClient() {
 
 /**
  * Counts this request against the IP's hourly budget and reports whether it
- * is over. Without Redis (REDIS_URL unset or unreachable) or outside
+ * is over. Without Redis (no URL set, or unreachable) or outside
  * production there is nothing to count against, so it never limits.
  */
 export async function isOverIpRateLimit(
