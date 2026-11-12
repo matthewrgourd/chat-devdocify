@@ -19,7 +19,10 @@ function getClient() {
   return client;
 }
 
-export async function checkIpRateLimit(ip: string | undefined) {
+export async function checkIpRateLimit(
+  ip: string | undefined,
+  { prefix = "ip-rate-limit", max = MAX_MESSAGES } = {}
+) {
   if (!isProductionEnvironment || !ip) {
     return;
   }
@@ -30,14 +33,14 @@ export async function checkIpRateLimit(ip: string | undefined) {
   }
 
   try {
-    const key = `ip-rate-limit:${ip}`;
+    const key = `${prefix}:${ip}`;
     const [count] = await redis
       .multi()
       .incr(key)
       .expire(key, TTL_SECONDS, "NX")
       .exec();
 
-    if (typeof count === "number" && count > MAX_MESSAGES) {
+    if (typeof count === "number" && count > max) {
       throw new ChatbotError("rate_limit:chat");
     }
   } catch (error) {
